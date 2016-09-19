@@ -1,0 +1,11 @@
+#brujula {
+    width: 200px;
+    height: 200px;
+    background-color: rgba(255,255,255,0.4);
+    margin:20px;
+    padding:0px;
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    z-index: 100;
+}
