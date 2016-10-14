@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-<title>Navas del Rey</title>
+<title>Visor F5 (Primera Fase)</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 <style>
@@ -13,64 +13,17 @@
 <link rel="stylesheet" type="text/css" href="css/main.css"> 
 </head>
 <body>
-<nav class="navbar navbar-default">
-  <div class="container-fluid">
-      <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-      <ul class="nav navbar-nav">
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Perímetros<span class="caret"></span></a>
-          <ul class="dropdown-menu">
-            <li><a id="E2" href="#">E3</a></li>
-            <li><a id="E3" href="#">E5</a></li>
-            <li><a id="E4" href="#">E7</a></li>
-          </ul>
-        </li>
-        <li><button type="button" class="btn btn-success" data-toggle="button" id="pintar">Pintar</button></li>
-      </ul>
-    </div>
-    </div>
-</nav>
 <div id="webgl"></div>
 <div id="brujula"></div>
 <script src="threejs/three.min.js"></script>
 <script src="threejs/OrbitControls.js"></script> 
 <script src="threejs/TerrainLoader.js"></script> 
-<script id="fragment_shh" type="x-shader/x-fragment">
-			#ifdef GL_ES
-			precision highp float;
-			#endif
-
-			uniform sampler2D tOne;
-			uniform sampler2D tSec;
-
-			varying vec2 vUv;
-			
-			void main(void)
-			{
-				vec3 c;
-				vec4 Ca = texture2D(tOne, vUv);
-				vec4 Cb = texture2D(tSec, vUv);
-				c = Ca.rgb * Ca.a + Cb.rgb * Cb.a * (1.0 - Ca.a);
-			    gl_FragColor= vec4(c, 1.0);
-				
-			}
-			
-		</script>
-<script id="vertex_shh" type="x-shader/x-vertex">
-		
-			varying vec2 vUv;
-			
-			void main()
-			{
-				vUv = uv;
-				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-				gl_Position = projectionMatrix * mvPosition;
-			}
-			
-</script>
 <script>
-function etiquetas( datos, color ){
-	console.log(datos.length);
+//----------------------------------------------------------
+//   FUNCIONES PARA RENDERIZAR ETIQUETAS
+//----------------------------------------------------------
+
+    function etiquetas( datos, color, altura ){
 	for (var i = 0; i < datos.length; i ++) {
         	var cilindro = new THREE.Mesh(new THREE.CylinderGeometry(1,1,2,10,10),
                     new THREE.MeshBasicMaterial({
@@ -78,24 +31,31 @@ function etiquetas( datos, color ){
                     }));
 		cilindro.rotation.set(Math.PI/2,0,0);
 		cilindro.position.set(datos[i][0],datos[i][1],datos[i][2]);
-		var label = makeTextSprite('A10');
+		var material = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
+		var geometry = new THREE.Geometry();
+		geometry.vertices.push(
+			new THREE.Vector3( datos[i][0], datos[i][1], datos[i][2]),
+			new THREE.Vector3( datos[i][0], datos[i][1], datos[i][2] + altura )
+		);
+		var line = new THREE.Line( geometry, material );
+		var label = makeTextSprite(datos[i][3]);
 		var dobj = new THREE.Object3D();
-		dobj.add(label);
-		dobj.position.set(datos[i][0],datos[i][1],datos[i][2] + 7);
-		dobj.scale.set(3,3,3);
+		label.position.set(datos[i][0],datos[i][1],datos[i][2] + altura);
+//		dobj.add(label);
 		scene.add(cilindro);
-		scene.add(dobj);
+		scene.add(label);
+		scene.add(line);
 	}
-}
+    }
 
-function makeTextSprite( message, parameters ){
+    function makeTextSprite( message, parameters ){
 	if ( parameters === undefined ) parameters = {};
 
 	var fontface = parameters["fontface"] || "Helvetica";
-	var fontsize = parameters["fontsize"] || 100;
+	var fontsize = parameters["fontsize"] || 30;
 	var canvas = document.createElement('canvas');
 	var context = canvas.getContext('2d');
-	context.font = "bold" + fontsize + "px " + fontface;
+	context.font = "Bold" + fontsize + "px " + fontface;
 
 	// get size data (height depends only on font size)
 	var metrics = context.measureText( message );
@@ -103,18 +63,23 @@ function makeTextSprite( message, parameters ){
 
 
 	// text color
-	context.fillStyle = "rgba(0, 0, 0, 1.0)";
-	context.fillText( message, 0, fontsize);
+	context.fillStyle = "rgba(0, 255, 0, 1.0)";
+	context.fillText( message, 160, 60);
 
 	// canvas contents will be used for a texture
 	var texture = new THREE.Texture(canvas)
 			texture.minFilter = THREE.LinearFilter;
 			texture.needsUpdate = true;
 
-	var spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+	var spriteMaterial = new THREE.SpriteMaterial({ map: texture, color: 0xff0000 });
 	var sprite = new THREE.Sprite( spriteMaterial );
+	sprite.scale.set(80,30,1.0);
 	return sprite;
-}
+    } 
+
+//-----------------------------------------------
+//  ESCENARIO
+//----------------------------------------------------------
 
     var width  = window.innerWidth,
         height = window.innerHeight,
@@ -124,6 +89,7 @@ function makeTextSprite( message, parameters ){
         count=0;
         
     var scene = new THREE.Scene();
+    scene.background = new THREE.Color( 0xCCFFFF );
     scene.add(new THREE.AmbientLight(0xeeeeee));
 
     var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
@@ -133,102 +99,50 @@ function makeTextSprite( message, parameters ){
     renderer.setSize(width, height);
     document.getElementById('webgl').appendChild(renderer.domElement);
     
+//----------------------------------------------------------
+//  LEER MDT.BIN Y RENDERIZAR TERRENO
+//----------------------------------------------------------
+
     var terrainLoader = new THREE.TerrainLoader();
     terrainLoader.load('images/mdt.bin', function(data) {
 
-        var vertShader = document.getElementById('vertex_shh').innerHTML;
-        var fragShader = document.getElementById('fragment_shh').innerHTML;
-
         var attributes = {}; // custom attributes
 
-        var uniforms = {    // custom uniforms (your textures)
+	var textureLoader = new THREE.TextureLoader();
+	var diffuse = textureLoader.load('images/pnoa_.jpg');
 
-            tOne: { type: "t", value: "" },
-            tSec: { type: "t", value: THREE.ImageUtils.loadTexture( "images/pnoa.jpg" ) }
-
-        };
-        var material_shh = new THREE.ShaderMaterial({
-
-            uniforms: uniforms,
-            attributes: attributes,
-            vertexShader: vertShader,
-            fragmentShader: fragShader
-        });
-
-        queryMarker = new THREE.Mesh(new THREE.SphereGeometry(.5),
-                    new THREE.MeshBasicMaterial({
-                            color: 0x990000
-                    }));
-                    
-        queryMarker.visible = false;
-        scene.add(queryMarker);
+        var material = new THREE.MeshLambertMaterial({ map: diffuse });
         
         var geometry = new THREE.PlaneGeometry(300, 300, 249, 249);
         
         for (var i = 0, l = geometry.vertices.length; i < l; i++) {
             geometry.vertices[i].z = data[i] / 65535 * 210;
         }
-        var plane = new THREE.Mesh(geometry, material_shh);
+        var plane = new THREE.Mesh(geometry, material);
         plane.name = 'plano';
         scene.add(plane);
-        $( "#E2" ).click(function() {
-            material_shh.uniforms["tOne"].value = THREE.ImageUtils.loadTexture( "images/e3.png" );
-        });
-        $( "#E3" ).click(function() {
-            material_shh.uniforms["tOne"].value = THREE.ImageUtils.loadTexture( "images/e5.png" );
-        });
-        $( "#E4" ).click(function() {
-            material_shh.uniforms["tOne"].value = THREE.ImageUtils.loadTexture( "images/e7.png" );
-        });
     });
 
 //-------------------------------------------
-//      ETIQUETAS	
+//     RENDERIZAR ETIQUETAS	
 //-------------------------------------------
 
-//	var label = makeTextSprite('Hola Solete');
-//	label.position.set(0,0,45);
-//	scene.add(label);
+    var datos_accesos = [[-46.6,-23.5,50,'A01'],[5.1,35.2,53,'A10'],[123.8,43.4,68.7,'A09']];
+    var datos_interfaz = [[-45.6,-33.5,49.5,'Z01'],[24.2,-7.4,65.5,'Z02'],[28.4,-26.1,64,'Z02B'],[64,16,67,'Z03'],[99.4,34.7,68,'Z04']];
+    var datos_inicio = [[-19,0.6,54.5,'INICIO']];
+    etiquetas(datos_accesos, 0XFF0000, 15);
+    etiquetas(datos_interfaz, 0X9966FF, 10);
+    etiquetas(datos_inicio, 0XFF6600, 10);
     
-    // GEOMETRIA DE LA LINEA
-	var geometryLine = new THREE.BufferGeometry();
-
-	// ATRIBUTOS DE LA LINEA
-	var positions = new Float32Array( 500 * 3 ); // 3 vertices per point
-	geometryLine.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
-    
-    var material = new THREE.LineBasicMaterial( { color: 0xff0000, linewidth: 4 } );
-
-	// LINEA
-	line = new THREE.Line( geometryLine,  material );
-	scene.add( line );
-    
-    var mousePosition = new THREE.Vector2(),
-    canvas = renderer.domElement,
-    canvasPosition = $(canvas).position;
-    
-    function updateLine(i,r) {
-		positions[ count * 3 -3 ] = i.point.x - .4*r.ray.direction.x;
-		positions[ count * 3 -2 ] = i.point.y - .4*r.ray.direction.y;
-		positions[ count * 3 -1 ] = i.point.z - .4*r.ray.direction.z;
-        line.geometry.attributes.position.needsUpdate = true;
-
-		}
-
-    function addPoint(i,r){
-        positions[count * 3] = i.point.x - .4*r.ray.direction.x;
-        positions[count * 3 + 1 ] = i.point.y - .4*r.ray.direction.y;
-        positions[count * 3 + 2 ] = i.point.z - .4*r.ray.direction.z;
-        count++;
-        line.geometry.setDrawRange( 0, count );
-        updateLine(i,r);
-    }
-    
+//-------------------------------------------
+//    ANTIGUA FUNCION QUE PUEDE SER UTIL 
+//-------------------------------------------
+    var mousePosition = new THREE.Vector2()
 
     function canvasClicked(e) {
             e.preventDefault();
             
-            if ( e.target == canvas ) {
+//            if ( e.target == canvas ) {
 
             mousePosition.x = ((e.clientX - renderer.domElement.offsetLeft) / window.innerWidth) * 2 - 1;
             mousePosition.y = -((e.clientY - renderer.domElement.offsetTop) / window.innerHeight) * 2 + 1;
@@ -237,17 +151,20 @@ function makeTextSprite( message, parameters ){
             var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());            
 
             var intersects = ray.intersectObject(scene.getObjectByName('plano'));
-		console.log(intersects[0]);
-            queryMarker.position.set(intersects[0].point.x,intersects[0].point.y,intersects[0].point.z);
-            queryMarker.visible = true;
-            queryMarker.updateMatrixWorld();
-        }
+		console.log(intersects[0].point);
+//        }
     };
-                        
+                        	
+//-------------------------------------------
+//    CONTROLES 
+//-------------------------------------------
 
     var controls = new THREE.OrbitControls(camera); 
 
-        // BRUJULA
+//-------------------------------------------
+//    BRUJULA 
+//-------------------------------------------
+
         
     var renderer2 = new THREE.WebGLRenderer( { alpha: true } );
     renderer2.setClearColor( 0x000000, 0);
@@ -270,9 +187,14 @@ function makeTextSprite( message, parameters ){
         model.position.set(0,0,0);
         scene2.add( model );
     }
-        
+
     render();
     
+//-------------------------------------------
+//    RENDER 
+//-------------------------------------------
+
+        
     function render() {
         controls.update();
 
