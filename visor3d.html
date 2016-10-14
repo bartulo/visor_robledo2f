@@ -69,6 +69,52 @@
 			
 </script>
 <script>
+function etiquetas( datos, color ){
+	console.log(datos.length);
+	for (var i = 0; i < datos.length; i ++) {
+        	var cilindro = new THREE.Mesh(new THREE.CylinderGeometry(1,1,2,10,10),
+                    new THREE.MeshBasicMaterial({
+                            color: color
+                    }));
+		cilindro.rotation.set(Math.PI/2,0,0);
+		cilindro.position.set(datos[i][0],datos[i][1],datos[i][2]);
+		var label = makeTextSprite('A10');
+		var dobj = new THREE.Object3D();
+		dobj.add(label);
+		dobj.position.set(datos[i][0],datos[i][1],datos[i][2] + 7);
+		dobj.scale.set(3,3,3);
+		scene.add(cilindro);
+		scene.add(dobj);
+	}
+}
+
+function makeTextSprite( message, parameters ){
+	if ( parameters === undefined ) parameters = {};
+
+	var fontface = parameters["fontface"] || "Helvetica";
+	var fontsize = parameters["fontsize"] || 100;
+	var canvas = document.createElement('canvas');
+	var context = canvas.getContext('2d');
+	context.font = "bold" + fontsize + "px " + fontface;
+
+	// get size data (height depends only on font size)
+	var metrics = context.measureText( message );
+	var textWidth = metrics.width;
+
+
+	// text color
+	context.fillStyle = "rgba(0, 0, 0, 1.0)";
+	context.fillText( message, 0, fontsize);
+
+	// canvas contents will be used for a texture
+	var texture = new THREE.Texture(canvas)
+			texture.minFilter = THREE.LinearFilter;
+			texture.needsUpdate = true;
+
+	var spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+	var sprite = new THREE.Sprite( spriteMaterial );
+	return sprite;
+}
 
     var width  = window.innerWidth,
         height = window.innerHeight,
@@ -88,7 +134,7 @@
     document.getElementById('webgl').appendChild(renderer.domElement);
     
     var terrainLoader = new THREE.TerrainLoader();
-    terrainLoader.load('images/mdt12k.bin', function(data) {
+    terrainLoader.load('images/mdt.bin', function(data) {
 
         var vertShader = document.getElementById('vertex_shh').innerHTML;
         var fragShader = document.getElementById('fragment_shh').innerHTML;
@@ -98,7 +144,7 @@
         var uniforms = {    // custom uniforms (your textures)
 
             tOne: { type: "t", value: "" },
-            tSec: { type: "t", value: THREE.ImageUtils.loadTexture( "images/pnoa12kvisor.jpg" ) }
+            tSec: { type: "t", value: THREE.ImageUtils.loadTexture( "images/pnoa.jpg" ) }
 
         };
         var material_shh = new THREE.ShaderMaterial({
@@ -117,10 +163,10 @@
         queryMarker.visible = false;
         scene.add(queryMarker);
         
-        var geometry = new THREE.PlaneGeometry(300, 300, 299, 299);
+        var geometry = new THREE.PlaneGeometry(300, 300, 249, 249);
         
         for (var i = 0, l = geometry.vertices.length; i < l; i++) {
-            geometry.vertices[i].z = data[i] / 65535 * 110;
+            geometry.vertices[i].z = data[i] / 65535 * 210;
         }
         var plane = new THREE.Mesh(geometry, material_shh);
         plane.name = 'plano';
@@ -135,6 +181,14 @@
             material_shh.uniforms["tOne"].value = THREE.ImageUtils.loadTexture( "images/e7.png" );
         });
     });
+
+//-------------------------------------------
+//      ETIQUETAS	
+//-------------------------------------------
+
+//	var label = makeTextSprite('Hola Solete');
+//	label.position.set(0,0,45);
+//	scene.add(label);
     
     // GEOMETRIA DE LA LINEA
 	var geometryLine = new THREE.BufferGeometry();
@@ -182,9 +236,8 @@
             vector.unproject(camera);
             var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());            
 
-            console.log(ray); 
             var intersects = ray.intersectObject(scene.getObjectByName('plano'));
-
+		console.log(intersects[0]);
             queryMarker.position.set(intersects[0].point.x,intersects[0].point.y,intersects[0].point.z);
             queryMarker.visible = true;
             queryMarker.updateMatrixWorld();
