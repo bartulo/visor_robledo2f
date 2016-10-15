@@ -113,10 +113,10 @@
 
         var material = new THREE.MeshLambertMaterial({ map: diffuse });
         
-        var geometry = new THREE.PlaneGeometry(300, 300, 249, 249);
+        var geometry = new THREE.PlaneGeometry(300, 300, 239, 239);
         
         for (var i = 0, l = geometry.vertices.length; i < l; i++) {
-            geometry.vertices[i].z = data[i] / 65535 * 210;
+            geometry.vertices[i].z = data[i] / 65535 * 110;
         }
         var plane = new THREE.Mesh(geometry, material);
         plane.name = 'plano';
